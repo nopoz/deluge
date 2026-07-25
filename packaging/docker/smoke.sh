@@ -72,6 +72,29 @@ libc=$(docker exec "$NAME" python3 -c 'import platform; print(platform.libc_ver(
 lt=$(docker exec "$NAME" python3 -c 'import libtorrent; print(libtorrent.__version__)')
 case "$lt" in 2.0.11*) ;; *) fail "expected libtorrent 2.0.11, got '$lt'" ;; esac
 
+# The libtorrent wheel statically links an OpenSSL built with
+# OPENSSLDIR=/usr/local/ssl, which does not exist here, so without these two
+# variables it loads no CA certificates and every HTTPS tracker announce fails.
+# That regression reached production once and broke all 896 torrents' announces.
+#
+# Checked without touching the network on purpose: a live TLS handshake in CI
+# would be flaky, and libtorrent exposes no way to inspect its cert store. The
+# functional proof is an A/B against a real tracker, recorded in ROADMAP.md.
+# What can regress silently is the variables being dropped or ca-certificates
+# being removed from the image, and both are caught here.
+certfile=$(docker exec "$NAME" printenv SSL_CERT_FILE 2>/dev/null || true)
+certdir=$(docker exec "$NAME" printenv SSL_CERT_DIR 2>/dev/null || true)
+[ -n "$certfile" ] || fail "SSL_CERT_FILE is unset; libtorrent will trust no CA and every HTTPS tracker will fail"
+[ -n "$certdir" ] || fail "SSL_CERT_DIR is unset; libtorrent will trust no CA and every HTTPS tracker will fail"
+
+docker exec "$NAME" test -s "$certfile" \
+  || fail "SSL_CERT_FILE points at '$certfile', which is missing or empty"
+docker exec "$NAME" test -d "$certdir" \
+  || fail "SSL_CERT_DIR points at '$certdir', which is not a directory"
+
+ncerts=$(docker exec "$NAME" sh -c "grep -c 'BEGIN CERTIFICATE' '$certfile'" 2>/dev/null || echo 0)
+[ "$ncerts" -ge 100 ] || fail "CA bundle holds only $ncerts certificates, expected >= 100"
+
 for p in AutoAdd Execute Label WebUi; do
   docker exec "$NAME" sh -c \
     "ls /usr/local/lib/python3.12/site-packages/deluge/plugins/${p}-*.egg" >/dev/null 2>&1 \

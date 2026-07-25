@@ -88,6 +88,23 @@ RUN chmod 0755 /etc/s6-overlay/scripts/init-deluge \
       /etc/s6-overlay/s6-rc.d/svc-deluged/run \
       /etc/s6-overlay/s6-rc.d/svc-deluge-web/run
 
+# SSL_CERT_FILE and SSL_CERT_DIR point libtorrent at the system CA store.
+#
+# The libtorrent wheel statically links its own OpenSSL, built with the upstream
+# default OPENSSLDIR=/usr/local/ssl. That path does not exist on Debian, so
+# set_default_verify_paths() loads zero CA certificates and every HTTPS tracker
+# announce fails with "certificate verify failed" or "unspecified system error".
+# OpenSSL checks these two variables in X509_STORE_set_default_paths regardless
+# of the compiled-in OPENSSLDIR, so they fix it without patching the wheel.
+#
+# This does not affect pyOpenSSL, which serves the daemon's own RPC and WebUI
+# sockets and is a separate TLS stack. Tracker TLS is libtorrent's alone.
+#
+# Distro-packaged libtorrent, as on the Alpine image this replaced, links against
+# a system OpenSSL already configured for /etc/ssl and so never needed this.
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt \
+    SSL_CERT_DIR=/etc/ssl/certs
+
 # S6_SERVICES_GRACETIME is how long s6 will wait for deluged to stop. Deluge
 # writes torrents.state during shutdown, and at ~900 torrents the 3s default is
 # not enough: a truncated write also overwrites the .bak, leaving no recovery.
