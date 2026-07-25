@@ -9,8 +9,3 @@ usermod  -o -u "${PUID:-1000}" -g "${PGID:-1000}" deluge
 mkdir -p /config /run/deluged-temp
 chown -R deluge:deluge /config
 chown deluge:deluge /run/deluged-temp
-
-# One unconditional line, so an operator running at --loglevel error still gets
-# confirmation of what started and as whom. Deluge itself says nothing below
-# warning level, which reads as a container that failed silently.
-echo "deluge: $(deluged --version | head -1), uid=$(id -u deluge) gid=$(id -g deluge) umask=${UMASK_SET:-${UMASK:-022}}"

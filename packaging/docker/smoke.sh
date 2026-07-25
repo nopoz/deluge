@@ -49,11 +49,22 @@ done
 health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$NAME")
 [ "$health" = healthy ] || fail "container health is '$health', not healthy"
 
-docker logs "$NAME" 2>&1 | grep -q "^deluge: " \
-  || fail "no startup status line; an operator at --loglevel error would see nothing"
+# Retried: the init oneshot's output can reach the container log later than the
+# daemons' own, so a single check right after startup can miss it.
+found=0
+for _ in $(seq 1 15); do
+  if docker logs "$NAME" 2>&1 | grep -q "^deluge: "; then found=1; break; fi
+  sleep 2
+done
+if [ "$found" -ne 1 ]; then
+  echo "--- full container log ---" >&2
+  docker logs "$NAME" 2>&1 >&2
+  fail "no startup status line; an operator at --loglevel error would see nothing"
+fi
 
-docker logs "$NAME" 2>&1 | grep -qi "deprecated, please define them in" \
-  && fail "s6 user bundle is in the deprecated location"
+if docker logs "$NAME" 2>&1 | grep -qi "deprecated, please define them in"; then
+  fail "s6 user bundle is in the deprecated location"
+fi
 
 libc=$(docker exec "$NAME" python3 -c 'import platform; print(platform.libc_ver()[0])')
 [ "$libc" = glibc ] || fail "expected glibc, got '$libc'"
@@ -94,7 +105,13 @@ docker stop -t 180 "$NAME" >/dev/null
 took=$(( $(date +%s) - start ))
 [ "$took" -lt 30 ] || fail "empty-config shutdown took ${took}s, expected under 30s"
 
-docker logs "$NAME" 2>&1 | grep -q "svc-deluged: stopping" \
-  || fail "s6 did not report stopping svc-deluged"
+# Retried: the last log lines are still being collected when docker stop
+# returns, so grepping immediately is a race.
+stopped=0
+for _ in $(seq 1 10); do
+  if docker logs "$NAME" 2>&1 | grep -q "svc-deluged: stopping"; then stopped=1; break; fi
+  sleep 1
+done
+[ "$stopped" -eq 1 ] || fail "s6 did not report stopping svc-deluged"
 
 echo "SMOKE PASS (libc=$libc libtorrent=$lt nofile=$soft uid=$uid stop=${took}s)"

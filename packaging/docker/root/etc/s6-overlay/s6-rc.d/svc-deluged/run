@@ -10,6 +10,15 @@ if [ "$hard" = unlimited ] || [ "$hard" -gt 262144 ]; then
 fi
 ulimit -n "$hard"
 
+# One unconditional line, so an operator at --loglevel error still gets
+# confirmation of what started and as whom; Deluge itself says nothing below
+# warning level, which reads as a container that failed silently.
+#
+# It lives here rather than in the init oneshot because a longrun's stdout goes
+# straight to the container log, whereas oneshot output runs through
+# s6-rc-oneshot-run and was intermittently lost.
+echo "deluge: $(deluged --version | head -1), uid=$(id -u deluge) gid=$(id -g deluge) umask=$(umask), nofile=$hard"
+
 exec s6-setuidgid deluge \
   /usr/local/bin/deluged \
     --do-not-daemonize \
