@@ -49,8 +49,13 @@ any flag. Set the hard limit too if your host's is low:
 
 ## Building locally
 
+    python3 version.py
     docker build -f packaging/docker/Dockerfile -t deluge:local .
     ./packaging/docker/smoke.sh deluge:local
+
+`version.py` writes `RELEASE-VERSION`, which is derived from git tags rather than
+checked in. The build context excludes `.git`, so generate it first or the build
+stops with a message telling you to.
 
 `smoke.sh` starts the image, checks both daemons answer, checks the interpreter
 and libtorrent build are what they should be, and checks shutdown is graceful.

@@ -19,6 +19,12 @@ RUN apt-get update \
 WORKDIR /src
 COPY . /src
 
+# version.py derives the version from git tags and caches it here. .git is kept
+# out of the build context, so the file has to exist already.
+RUN test -f /src/RELEASE-VERSION || { \
+      echo "RELEASE-VERSION is missing. Run 'python3 version.py' in the source tree first." >&2; \
+      exit 1; }
+
 RUN python -m pip install --no-cache-dir --upgrade pip wheel 'setuptools<82'
 
 # libtorrent is not in install_requires, and pygeoip and distro are listed only
