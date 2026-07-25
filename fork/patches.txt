@@ -6,6 +6,7 @@
 
 # --- pending-upstream: delete the line once the PR lands ---
 perf/sync-status-call
+fix/remove-zombie-torrent
 feat/docker
 
 # --- local-forever: never dropped ---
