@@ -6,6 +6,7 @@
 
 import os
 import shutil
+import threading
 import warnings
 from base64 import b64encode
 from unittest import mock
@@ -17,6 +18,7 @@ from twisted.internet import reactor, task
 from deluge import component
 from deluge.bencode import bencode
 from deluge.conftest import BaseTestCase
+from deluge.core import torrentmanager
 from deluge.core.core import Core
 from deluge.core.rpcserver import RPCServer
 from deluge.error import InvalidTorrentError
@@ -148,3 +150,110 @@ class TestTorrentmanager(BaseTestCase):
 
         state = self.tm.open_state()
         assert len(state.torrents) == 1
+
+    def test_update_posts_torrent_updates(self):
+        """The periodic update must refresh the status cache itself.
+
+        Nothing else calls post_torrent_updates() when no client is polling, so
+        without this the cached status would never refresh and daemon-side
+        consumers such as the stop_at_ratio check would read stale values.
+        """
+        with mock.patch.object(self.tm.session, 'post_torrent_updates') as post:
+            self.tm.update()
+
+        post.assert_called_once_with()
+
+    def test_on_alert_state_update_without_pending_request(self):
+        """A state_update_alert with no client request queued must not raise."""
+        self.tm.torrents_status_requests = []
+
+        self.tm.on_alert_state_update(mock.Mock(status=[]))
+
+    @pytest_twisted.inlineCallbacks
+    def test_update_refreshes_a_bounded_rotating_slice(self):
+        """Idle torrents are reported by state_update_alert once and never again.
+
+        Refreshing every torrent to compensate is what pegged the reactor thread,
+        so update() refreshes a fixed-size slice per tick and rotates through the
+        rest on later ticks. The cost stays constant as the torrent count grows.
+        """
+        slice_size = torrentmanager.STATUS_REFRESH_PER_TICK
+        fake_torrents = {
+            f'torrent{i}': mock.Mock(options={'stop_at_ratio': False})
+            for i in range(slice_size * 2)
+        }
+
+        def refreshed():
+            return {
+                tid
+                for tid, torrent in fake_torrents.items()
+                if torrent.get_lt_status.called
+            }
+
+        with mock.patch.dict(self.tm.torrents, fake_torrents, clear=True):
+            with mock.patch.object(self.tm.session, 'post_torrent_updates'):
+                yield self.tm.refresh_status_slice()
+                first = refreshed()
+                for torrent in fake_torrents.values():
+                    torrent.get_lt_status.reset_mock()
+                yield self.tm.refresh_status_slice()
+                second = refreshed()
+
+        assert first, 'each tick should make progress'
+        assert second, 'each tick should make progress'
+        assert len(first) <= slice_size, 'never more than the per-tick cap'
+        assert len(second) <= slice_size, 'never more than the per-tick cap'
+        assert not first & second, 'consecutive ticks should refresh different torrents'
+
+    @pytest_twisted.inlineCallbacks
+    def test_refresh_status_slice_runs_off_the_reactor(self):
+        """A contended handle.status() can block for hundreds of milliseconds.
+
+        Bounding the slice by count, then by time, both failed: a single call is
+        already too expensive to make on the reactor thread at 3 Gbps. It has to
+        run in a thread like the resume-data scan does.
+        """
+        reactor_thread = threading.get_ident()
+        refresh_threads = []
+
+        def get_lt_status():
+            refresh_threads.append(threading.get_ident())
+
+        fake_torrents = {}
+        for i in range(torrentmanager.STATUS_REFRESH_PER_TICK):
+            t = mock.Mock(options={'stop_at_ratio': False})
+            t.get_lt_status.side_effect = get_lt_status
+            fake_torrents[f'torrent{i}'] = t
+
+        with mock.patch.dict(self.tm.torrents, fake_torrents, clear=True):
+            yield self.tm.refresh_status_slice()
+
+        assert refresh_threads, 'refresh never ran'
+        assert reactor_thread not in refresh_threads, (
+            'the refresh must not run on the reactor thread'
+        )
+
+    @pytest_twisted.inlineCallbacks
+    def test_save_resume_data_scan_runs_off_the_reactor(self):
+        """need_save_resume_data() takes libtorrent's session mutex.
+
+        Scanning ~900 torrents for it on the reactor thread was measured blocking
+        the daemon for 40-110 seconds at a time during a 3 Gbps download.
+        """
+        reactor_thread = threading.get_ident()
+        scan_threads = []
+
+        def need_save_resume_data():
+            scan_threads.append(threading.get_ident())
+            return False
+
+        fake = mock.Mock()
+        fake.handle.need_save_resume_data.side_effect = need_save_resume_data
+
+        with mock.patch.dict(self.tm.torrents, {'faketorrent': fake}, clear=True):
+            yield self.tm.save_resume_data()
+
+        assert scan_threads, 'need_save_resume_data was never consulted'
+        assert reactor_thread not in scan_threads, (
+            'the scan must not run on the reactor thread'
+        )
