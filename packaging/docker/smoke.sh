@@ -9,6 +9,10 @@ chmod 777 "$CFG"
 
 cleanup() {
   docker rm -f "$NAME" >/dev/null 2>&1 || true
+  # The daemons ran as PUID, so /config is not ours to delete. Hand it back
+  # from a root container first.
+  docker run --rm -v "$CFG":/cfg --entrypoint chown "$IMAGE" \
+    -R "$(id -u):$(id -g)" /cfg >/dev/null 2>&1 || true
   rm -rf "$CFG"
 }
 trap cleanup EXIT
