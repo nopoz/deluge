@@ -6,6 +6,7 @@
 
 # --- pending-upstream: delete the line once the PR lands ---
 perf/sync-status-call
+feat/docker
 
 # --- local-forever: never dropped ---
 local/fork-tooling
