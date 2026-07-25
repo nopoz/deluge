@@ -1,0 +1,17 @@
+#!/command/with-contenv sh
+umask "${UMASK_SET:-${UMASK:-022}}"
+
+# libtorrent needs far more descriptors than the 1024 soft default at this
+# scale. Raise the soft limit toward the hard limit so the image is correct
+# without the operator remembering a --ulimit flag.
+hard=$(ulimit -Hn)
+if [ "$hard" = unlimited ] || [ "$hard" -gt 262144 ]; then
+  hard=262144
+fi
+ulimit -n "$hard"
+
+exec s6-setuidgid deluge \
+  /usr/local/bin/deluged \
+    --do-not-daemonize \
+    --config /config \
+    --loglevel "${DELUGE_LOGLEVEL:-info}"
