@@ -1,0 +1,13 @@
+# Patch queue for the downstream branch.
+#
+# Two groups. A sync drops lines only from pending-upstream; local-forever
+# lines are never dropped. Order is significant: branches merge in the order
+# listed. Blank lines and lines starting with # are ignored.
+
+# --- pending-upstream: delete the line once the PR lands ---
+perf/sync-status-call
+fix/remove-zombie-torrent
+feat/docker
+
+# --- local-forever: never dropped ---
+local/fork-tooling
