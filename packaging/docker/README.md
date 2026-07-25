@@ -10,13 +10,13 @@ The web UI is on port 8112, the daemon RPC on 58846, and BitTorrent on 6881.
 
 ## Environment
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `PUID` | `1000` | uid the daemons run as |
-| `PGID` | `1000` | gid the daemons run as |
-| `UMASK_SET` | `022` | umask for created files; `UMASK` is accepted as an alias |
-| `TZ` | unset | container timezone |
-| `DELUGE_LOGLEVEL` | `info` | Deluge log level |
+| Variable          | Default | Purpose                                                  |
+| ----------------- | ------- | -------------------------------------------------------- |
+| `PUID`            | `1000`  | uid the daemons run as                                   |
+| `PGID`            | `1000`  | gid the daemons run as                                   |
+| `UMASK_SET`       | `022`   | umask for created files; `UMASK` is accepted as an alias |
+| `TZ`              | unset   | container timezone                                       |
+| `DELUGE_LOGLEVEL` | `info`  | Deluge log level                                         |
 
 `PUID`/`PGID` are applied at start and `/config` is chowned to match. Download and
 media mounts are deliberately left alone, so their permissions stay yours to
