@@ -7,7 +7,9 @@
 # --- pending-upstream: delete the line once the PR lands ---
 perf/sync-status-call
 fix/remove-zombie-torrent
+fix/test-watchdog-timeout
 feat/docker
 
 # --- local-forever: never dropped ---
 local/fork-tooling
+local/ci
