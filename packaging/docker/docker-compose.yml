@@ -1,6 +1,9 @@
 services:
   deluge:
-    image: ghcr.io/nopoz/deluge:latest
+    # The workflow publishes to ghcr.io/<owner>/<repo>, so a fork's image lives
+    # under the fork. Override without editing this file:
+    #   DELUGE_IMAGE=ghcr.io/<owner>/deluge:prod-2026-07-25 docker compose up -d
+    image: ${DELUGE_IMAGE:-ghcr.io/deluge-torrent/deluge:latest}
     container_name: deluge
     network_mode: host
     environment:

@@ -4,7 +4,12 @@
 
 ## Quick start
 
-    docker compose -f packaging/docker/docker-compose.yml up -d
+    DELUGE_IMAGE=ghcr.io/<owner>/deluge:latest \
+      docker compose -f packaging/docker/docker-compose.yml up -d
+
+Images are published to `ghcr.io/<owner>/<repo>`, so a fork's image lives under the
+fork. Pin production to a `prod-<date>` tag rather than `:downstream` or `:latest`,
+so the running image traces to one commit.
 
 The web UI is on port 8112, the daemon RPC on 58846, and BitTorrent on 6881.
 
