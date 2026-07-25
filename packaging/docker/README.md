@@ -39,6 +39,34 @@ default: it is an unconditional sleep between SIGTERM and SIGKILL rather than a
 timeout, so raising it would add that delay to every stop even when Deluge has
 already exited.
 
+## Health check
+
+The image ships its own `HEALTHCHECK`, which checks that both deluged (58846) and
+deluge-web (8112) are listening. You do not need one in your compose file.
+
+If you are migrating from the linuxserver image, **delete your `healthcheck:` block**.
+A test like `wget --spider http://127.0.0.1:8112` fails here with `wget: not found`:
+this is a slim Debian base with no `wget`, `curl` or `nc`, where linuxserver's Alpine
+base had busybox `wget`. A compose-level `healthcheck` overrides the image's, so a
+stale one leaves the container permanently unhealthy while Deluge runs fine.
+
+To override it anyway, use Python, which is always present:
+
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import socket,sys; sys.exit(socket.socket().connect_ex(('127.0.0.1',8112)))"]
+
+## Logging
+
+Everything goes to the container's stdout; read it with `docker logs`.
+
+The init prints one unconditional line naming the version, uid, gid and umask, so a
+successful start is visible even at `DELUGE_LOGLEVEL=error`:
+
+    deluge: deluged 2.2.1.dev53, uid=1064 gid=65537 umask=002
+
+Below that, Deluge only logs at the level you set. At `error` a healthy daemon says
+nothing further, which is normal and not a sign that logging is broken.
+
 ## File descriptors
 
 libtorrent needs far more descriptors than the usual 1024 soft default. The image

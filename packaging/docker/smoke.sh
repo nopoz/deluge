@@ -39,6 +39,22 @@ done
 port_open 58846 || fail "deluged not listening on 58846"
 port_open 8112  || fail "deluge-web not listening on 8112"
 
+# The image's own HEALTHCHECK must pass. A slim base has no wget or curl, so a
+# healthcheck written for the linuxserver image fails with "wget: not found".
+echo "waiting for healthy"
+for _ in $(seq 1 60); do
+  [ "$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$NAME")" = healthy ] && break
+  sleep 2
+done
+health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$NAME")
+[ "$health" = healthy ] || fail "container health is '$health', not healthy"
+
+docker logs "$NAME" 2>&1 | grep -q "^deluge: " \
+  || fail "no startup status line; an operator at --loglevel error would see nothing"
+
+docker logs "$NAME" 2>&1 | grep -qi "deprecated, please define them in" \
+  && fail "s6 user bundle is in the deprecated location"
+
 libc=$(docker exec "$NAME" python3 -c 'import platform; print(platform.libc_ver()[0])')
 [ "$libc" = glibc ] || fail "expected glibc, got '$libc'"
 

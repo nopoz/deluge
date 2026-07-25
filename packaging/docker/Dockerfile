@@ -110,4 +110,9 @@ ENV PYTHONUNBUFFERED=1 \
 VOLUME /config
 EXPOSE 8112 58846 6881 6881/udp
 
+# Python, because a slim base has no wget, curl or nc. Checks both daemons:
+# deluge-web answering while deluged is down is not a healthy container.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+  CMD python3 -c "import socket,sys; sys.exit(any(socket.socket().connect_ex(('127.0.0.1',p)) for p in (58846,8112)))"
+
 ENTRYPOINT ["/init"]
