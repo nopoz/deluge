@@ -9,6 +9,7 @@ perf/sync-status-call
 fix/remove-zombie-torrent
 fix/test-watchdog-timeout
 fix/plugin-keys-in-status-diff
+perf/webui-grid
 feat/docker
 
 # --- local-forever: never dropped ---
