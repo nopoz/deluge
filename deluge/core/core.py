@@ -786,10 +786,8 @@ class Core(component.Component):
                 torrent_keys, diff, update=update, all_keys=all_keys
             )
         except KeyError:
-            import traceback
-
-            traceback.print_exc()
             # Torrent was probably removed meanwhile
+            log.debug('Torrent %s removed before status could be fetched', torrent_id)
             return {}
 
         # Ask the plugin manager to fill in the plugin keys
