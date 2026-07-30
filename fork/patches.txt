@@ -11,6 +11,13 @@ fix/test-watchdog-timeout
 fix/plugin-keys-in-status-diff
 perf/webui-grid
 feat/docker
+# Not submitted by us. Upstream #506 and #6 both already remove this
+# traceback.print_exc(), so a third PR would be duplicate noise. Drop this
+# line if either lands. Watch #506: as written it also makes
+# TorrentManager.__getitem__ return None instead of raising, which turns
+# create_torrent_status into an uncaught AttributeError, so if it merges
+# as-is we inherit that and need our own fix for it.
+fix/status-keyerror-traceback
 
 # --- local-forever: never dropped ---
 local/fork-tooling
