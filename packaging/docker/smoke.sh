@@ -25,6 +25,44 @@ port_open() {  # $1 = port
     2>/dev/null
 }
 
+# Compiled extensions must not use instructions above the image's baseline ISA.
+#
+# rencode's build.py hardcodes -march=native, so the extension targets whatever
+# CPU built it. A build on a runner newer than the deployment host yields an
+# image whose every process dies with SIGILL on `import rencode`, before Python
+# can log anything. That reached production once.
+#
+# Detected by the EVEX prefix (0x62), which in 64-bit mode is exclusively
+# AVX-512, rather than by mnemonic or by %zmm: the instruction that broke
+# production was vmovdqu8 on %ymm, so register width does not reveal it.
+#
+# Read statically, because this script runs on the machine that compiled the
+# code. Importing rencode here would succeed no matter what and prove nothing.
+if command -v objdump >/dev/null 2>&1; then
+  echo "checking compiled extensions for above-baseline instructions"
+  purelib=$(docker run --rm --entrypoint python3 "$IMAGE" \
+    -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+  sodir=$(mktemp -d)
+  cid=$(docker create "$IMAGE")
+  for pkg in rencode setproctitle zope; do
+    docker cp "$cid:$purelib/$pkg" "$sodir/" >/dev/null 2>&1 || true
+  done
+  docker rm "$cid" >/dev/null
+  evex=""
+  while IFS= read -r so; do
+    n=$(objdump -d "$so" 2>/dev/null | grep -cE '^[[:space:]]+[0-9a-f]+:[[:space:]]+62 ' || true)
+    [ "${n:-0}" -gt 0 ] && evex="$evex $(basename "$so"):$n"
+  done < <(find "$sodir" -name '*.so')
+  rm -rf "$sodir"
+  if [ -n "$evex" ]; then
+    echo "SMOKE FAIL: AVX-512 (EVEX) instructions in compiled extensions:$evex" >&2
+    echo "the CC baseline wrapper in the Dockerfile is not taking effect" >&2
+    exit 1
+  fi
+else
+  echo "objdump not found, skipping baseline ISA check" >&2
+fi
+
 docker run -d --name "$NAME" \
   -e PUID=1000 -e PGID=1000 -e DELUGE_LOGLEVEL=info \
   --ulimit nofile=262144:262144 \

@@ -27,6 +27,32 @@ RUN test -f /src/RELEASE-VERSION || { \
 
 RUN python -m pip install --no-cache-dir --upgrade pip wheel 'setuptools<82'
 
+# rencode's build.py hardcodes -march=native -mfma, so the extension is built
+# for whatever CPU the build machine happens to have. A build on a runner newer
+# than the deployment host produces an image whose every process dies with
+# SIGILL on `import rencode`, before Python can log anything.
+#
+# This reached production: a build emitted vmovdqu8, an AVX-512BW instruction,
+# against a host with no AVX-512. Note it targets %ymm, not %zmm, so it is
+# EVEX encoding rather than register width that gives it away. smoke.sh checks
+# for the EVEX prefix for exactly that reason.
+#
+# CFLAGS cannot fix this: extra_compile_args land after CFLAGS on the command
+# line. gcc takes the last of any -march/-m<feature> pair, so a wrapper that
+# appends a fixed baseline after every argument wins without parsing them.
+#
+# x86-64-v2 is SSE4.2-era (Nehalem, 2008). Nothing here is hot enough to want
+# a higher floor: rencode is branchy serialisation, not numeric code.
+ENV CC=/usr/local/bin/cc-baseline
+RUN printf '%s\n' \
+      '#!/bin/sh' \
+      'exec gcc "$@" -march=x86-64-v2 -mno-fma' \
+      > "${CC}" \
+ && chmod 0755 "${CC}" \
+ && { "${CC}" -march=native -mfma -Q --help=target \
+        | grep -qE '^[[:space:]]+-march=[[:space:]]+x86-64-v2$' \
+      || { echo 'cc-baseline does not override -march=native' >&2; exit 1; }; }
+
 # libtorrent is not in install_requires, and pygeoip and distro are listed only
 # in requirements.txt. The constraint pins libtorrent so nothing can float it.
 #
