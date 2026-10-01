@@ -11,6 +11,12 @@ on:
         description: "Set to 1 to enable retrieving core dump from crashes"
         default: "0"
 
+# A superseded run tells us nothing, and this fork pushes rebuilt branches
+# often, so let a newer commit on the same ref cancel the older run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   UV_SYSTEM_PYTHON: 1
 

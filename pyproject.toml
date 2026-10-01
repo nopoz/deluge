@@ -4,6 +4,10 @@ requires = ["setuptools", "wheel"]
 [tool.pytest.ini_options]
 # Dump tracebacks if a test takes longer than X seconds
 faulthandler_timeout = 60
+# faulthandler only dumps, it never aborts. Without a hard cap a single hung
+# test consumed the whole CI job budget and the run was cancelled, reporting
+# nothing. No individual test here legitimately runs for a minute.
+timeout = 120
 # Hide logged warnings and errors in test output.
 log_cli_level = "CRITICAL"
 addopts = "--basetemp=_pytest_temp"
