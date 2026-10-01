@@ -51,7 +51,7 @@ deluge-web (8112) are listening. You do not need one in your compose file.
 
 If you are migrating from the linuxserver image, **delete your `healthcheck:` block**.
 A test like `wget --spider http://127.0.0.1:8112` fails here with `wget: not found`:
-this is a slim Debian base with no `wget`, `curl` or `nc`, where linuxserver's Alpine
+this is a slim Debian base with no `wget` or `nc`, where linuxserver's Alpine
 base had busybox `wget`. A compose-level `healthcheck` overrides the image's, so a
 stale one leaves the container permanently unhealthy while Deluge runs fine.
 
@@ -59,6 +59,23 @@ To override it anyway, use Python, which is always present:
 
     healthcheck:
       test: ["CMD", "python3", "-c", "import socket,sys; sys.exit(socket.socket().connect_ex(('127.0.0.1',8112)))"]
+
+## Post-processing tools
+
+For the Execute plugin, this image also carries `curl`, `unrar` and 7-Zip at
+`/usr/bin/7z`. They are here for completion scripts, which run inside the
+container and so can only use what the image provides.
+
+Worth knowing if you are migrating from the linuxserver image: it shipped a much
+broader userland, so a script that shells out to any of these worked there
+without declaring the dependency. A completion script usually logs to a file of
+its own rather than to `docker logs`, so if it breaks this way nothing in
+Deluge's own output will say so. Check the script's log before assuming the
+plugin did not fire.
+
+`unrar` is the non-free RARLAB extractor. It is the only small option that
+handles the multi-volume archives these scripts normally meet; `unrar-free`
+wraps libarchive, which cannot read past the first volume.
 
 ## Logging
 
