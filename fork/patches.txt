@@ -24,3 +24,12 @@ fix/status-keyerror-traceback
 # --- local-forever: never dropped ---
 local/fork-tooling
 local/ci
+# Unlike every other branch here, this one is based on feat/docker rather than
+# develop: it edits packaging/docker/Dockerfile, which only exists there, so a
+# develop-based branch would collide on add/add. It must therefore stay listed
+# after feat/docker. It carries curl, unrar and 7z for the Execute-plugin
+# completion script; unrar is non-free, which is the whole reason it is not
+# folded into feat/docker. If feat/docker ever lands upstream and its line goes
+# away, rebase this onto whatever then provides the Dockerfile before dropping
+# that line, or this branch will drag the entire old feat/docker back in.
+local/docker-postproc-tools
