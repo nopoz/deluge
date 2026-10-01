@@ -1,0 +1,8 @@
+#!/command/with-contenv sh
+umask "${UMASK_SET:-${UMASK:-022}}"
+
+exec s6-setuidgid deluge \
+  /usr/local/bin/deluge-web \
+    --do-not-daemonize \
+    --config /config \
+    --loglevel "${DELUGE_LOGLEVEL:-info}"

@@ -1,0 +1,13 @@
+.git
+.github
+build
+dist
+*.egg-info
+deluge/plugins/*.egg
+deluge/plugins/*/build
+__pycache__
+**/__pycache__
+*.pyc
+_pytest_temp
+docs/_build
+.tox
