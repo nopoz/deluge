@@ -2,7 +2,9 @@ setuptools < 82
 libtorrent
 twisted[tls]>=17.1
 rencode
-pyopenssl
+# 26 removed crypto.X509Req, which crypto_utils.py still uses, so the daemon
+# fails to start. Upstream PR #514 fixes the code; drop this pin when it lands.
+pyopenssl < 26
 pyxdg
 pillow
 mako
