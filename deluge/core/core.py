@@ -796,10 +796,8 @@ class Core(component.Component):
                 plugin_status=plugin_status,
             )
         except KeyError:
-            import traceback
-
-            traceback.print_exc()
             # Torrent was probably removed meanwhile
+            log.debug('Torrent %s removed before status could be fetched', torrent_id)
             return {}
 
     @export
