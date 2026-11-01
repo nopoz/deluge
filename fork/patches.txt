@@ -9,6 +9,7 @@ perf/sync-status-call
 fix/remove-zombie-torrent
 fix/test-watchdog-timeout
 fix/plugin-keys-in-status-diff
+fix/slow-status-off-reactor
 fix/alertmanager-pause-leak
 fix/no-password-in-auth-log
 fix/client-connect-leak
