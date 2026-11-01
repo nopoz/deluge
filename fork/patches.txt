@@ -11,6 +11,7 @@ fix/test-watchdog-timeout
 fix/plugin-keys-in-status-diff
 fix/alertmanager-pause-leak
 fix/no-password-in-auth-log
+fix/client-connect-leak
 perf/webui-grid
 feat/docker
 # Not submitted by us. Upstream #506 and #6 both already remove this
