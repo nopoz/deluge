@@ -1,0 +1,11 @@
+#!/command/with-contenv sh
+# Chown /config ONLY. Download and media mounts are deliberately untouched: a
+# recursive chown across a media library would be slow and destructive.
+set -e
+
+groupmod -o -g "${PGID:-1000}" deluge
+usermod  -o -u "${PUID:-1000}" -g "${PGID:-1000}" deluge
+
+mkdir -p /config /run/deluged-temp
+chown -R deluge:deluge /config
+chown deluge:deluge /run/deluged-temp

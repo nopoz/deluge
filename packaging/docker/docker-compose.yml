@@ -1,0 +1,25 @@
+services:
+  deluge:
+    # The workflow publishes to ghcr.io/<owner>/<repo>, so a fork's image lives
+    # under the fork. Override without editing this file:
+    #   DELUGE_IMAGE=ghcr.io/<owner>/deluge:prod-2026-07-25 docker compose up -d
+    image: ${DELUGE_IMAGE:-ghcr.io/deluge-torrent/deluge:latest}
+    container_name: deluge
+    network_mode: host
+    environment:
+      PUID: 1000
+      PGID: 1000
+      UMASK_SET: "002"
+      TZ: Etc/UTC
+      DELUGE_LOGLEVEL: error
+    volumes:
+      - ./config:/config
+      - ./downloads:/downloads
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    # Deluge writes torrents.state on shutdown. At ~900 torrents the default 10s
+    # is not enough, and a truncated write also overwrites the .bak.
+    stop_grace_period: 180s
+    restart: unless-stopped
