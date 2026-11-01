@@ -780,6 +780,7 @@ class Core(component.Component):
         diff=False,
         update=False,
         all_keys=False,
+        defer_slow=False,
     ):
         try:
             # Passed into get_status rather than merged over its result, so the
@@ -794,6 +795,7 @@ class Core(component.Component):
                 update=update,
                 all_keys=all_keys,
                 plugin_status=plugin_status,
+                defer_slow=defer_slow,
             )
         except KeyError:
             import traceback
@@ -818,6 +820,7 @@ class Core(component.Component):
             # contended session mutex. get_torrents_status also serves cache.
             update=False,
             all_keys=not keys,
+            defer_slow=True,
         )
 
     @export
