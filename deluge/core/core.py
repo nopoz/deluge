@@ -798,10 +798,8 @@ class Core(component.Component):
                 defer_slow=defer_slow,
             )
         except KeyError:
-            import traceback
-
-            traceback.print_exc()
             # Torrent was probably removed meanwhile
+            log.debug('Torrent %s removed before status could be fetched', torrent_id)
             return {}
 
     @export
