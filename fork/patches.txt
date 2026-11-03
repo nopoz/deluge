@@ -37,3 +37,5 @@ local/ci
 # away, rebase this onto whatever then provides the Dockerfile before dropping
 # that line, or this branch will drag the entire old feat/docker back in.
 local/docker-postproc-tools
+# Fork-only README section describing what downstream adds and where the image is.
+local/readme
