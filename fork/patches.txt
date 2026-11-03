@@ -15,6 +15,7 @@ fix/no-password-in-auth-log
 fix/client-connect-leak
 fix/sessionproxy-add-fetch
 fix/tracker-reply-sync-status
+fix/execute-spawn-off-reactor
 perf/webui-grid
 feat/docker
 # Not submitted by us. Upstream #506 and #6 both already remove this
