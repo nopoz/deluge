@@ -21,7 +21,7 @@ The fixes came out of running Deluge with around 1,000 torrents on a 3 Gbps conn
 - **The Peers and Files tabs no longer stall the daemon.** The detailed views of a single torrent, and the progress of a torrent being moved to network storage, now load in the background. ([#537](https://github.com/deluge-torrent/deluge/pull/537))
 - **Adding torrents in bulk no longer locks things up.** Every connected interface used to fetch every detail of a new torrent the moment it was added, so a batch of adds from Sonarr, Radarr or AutoAdd could stall the daemon for minutes. ([#535](https://github.com/deluge-torrent/deluge/pull/535))
 - **Startup no longer stalls on tracker replies.** Each reply used to make a blocking call, and on startup every torrent announces at once. ([#538](https://github.com/deluge-torrent/deluge/pull/538))
-- **Completion scripts no longer stall the daemon.** The Execute plugin started its script on the thread that answers the user interfaces, and under heavy disk load each start took several seconds. Scripts now start in the background.
+- **Completion scripts no longer stall the daemon.** The Execute plugin started its script on the thread that answers the user interfaces, and under heavy disk load each start took several seconds. Scripts now start in the background. ([#540](https://github.com/deluge-torrent/deluge/pull/540))
 - **Smaller status updates with plugins enabled.** Plugin columns such as Label were resent for every torrent on every refresh, whether they had changed or not. ([#518](https://github.com/deluge-torrent/deluge/pull/518))
 - **The web UI downloads only what changed.** With ~900 torrents each refresh is about 40 times smaller. ([#539](https://github.com/deluge-torrent/deluge/pull/539))
 
