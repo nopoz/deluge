@@ -99,6 +99,38 @@ RUN tar -C / -Jxpf /tmp/s6-noarch.tar.xz \
  && apt-get autoremove -y \
  && rm -rf /var/lib/apt/lists/*
 
+# Tools for the host's post-processing script, which Deluge's Execute plugin
+# runs inside this container. The linuxserver image this replaced happened to
+# ship them, so the script depended on them without ever declaring it; on a
+# slim base it failed with "command not found" on every torrent, silently,
+# because the script's only output is its own log file.
+#
+#   curl   every HTTP call it makes: Sonarr, Radarr, Plex, Pushover, and more
+#   unrar  scene releases are multi-volume RAR, often RAR 1.5 vintage
+#   7zip   provides /usr/bin/7z, the path the script hardcodes
+#
+# unrar is non-free, which is why this sits on a local-forever branch and not
+# on feat/docker. The only free RAR extractor that handles multi-volume sets is
+# unar, and it pulls GNUstep and ICU for roughly 200 MB against unrar's 0.4 MB.
+# unrar-free is not a candidate at all: it wraps libarchive, whose RAR reader
+# has no multi-volume support, so it extracts the first volume and reports
+# success.
+#
+# Installed after the autoremove above so that sweep cannot reach these, and
+# non-free is switched back off so the shipped image does not carry an apt
+# source the build no longer needs.
+RUN set -eux; \
+    sed -i 's/^Components: main$/Components: main non-free/' \
+      /etc/apt/sources.list.d/debian.sources; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends curl unrar 7zip; \
+    sed -i 's/^Components: main non-free$/Components: main/' \
+      /etc/apt/sources.list.d/debian.sources; \
+    rm -rf /var/lib/apt/lists/*; \
+    for b in curl unrar 7z; do \
+      command -v "$b" >/dev/null || { echo "missing $b" >&2; exit 1; }; \
+    done
+
 RUN --mount=type=bind,from=builder,source=/wheels,target=/wheels \
     python -m pip install --no-cache-dir --no-index --find-links=/wheels \
       "deluge[all]" libtorrent pygeoip distro
